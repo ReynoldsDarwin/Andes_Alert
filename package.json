@@ -1,1 +1,41 @@
-// TODO: Implementar package.json
+{
+  "name": "andes_alert",
+  "version": "1.0.0",
+  "description": "Sistema web de alerta climática temprana para la zona de Taraco-Huancané-Puno-Perú.\r Prioriza el envío de alertas según la probabilidad de ocurrencia del fenómeno climático.",
+  "main": "next.config.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ReynoldsDarwin/Andes_Alert.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ReynoldsDarwin/Andes_Alert/issues"
+  },
+  "homepage": "https://github.com/ReynoldsDarwin/Andes_Alert#readme",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.116.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.47.0",
+    "next": "^16.3.5",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "tailwind-merge": "^3.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "autoprefixer": "^10.6.1",
+    "postcss": "^8.5.28",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^7.0.2"
+  }
+}

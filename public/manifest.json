@@ -1,1 +1,10 @@
-// TODO: Implementar manifest.json
+{
+  "name": "Andes Alert",
+  "short_name": "AndesAlert",
+  "description": "Sistema de alerta climática temprana para Taraco - Huancané",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0284c7",
+  "icons": []
+}
