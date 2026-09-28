@@ -7,5 +7,5 @@ Collaborators:
 
 - Darwin Reynolds 
 - Carlos Paul
--
+- Luis David
 -
