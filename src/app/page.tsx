@@ -1,6 +1,6 @@
 import { obtenerPronosticoTaraco } from '@/services/meteorologia/open-meteo';
 import { analizarRiesgoHelada } from '@/core/motor-probabilidades';
-import PanelAlertas from '@/components/dashboard/PanelAlertas';
+import ClientDashboard from '@/components/dashboard/ClientDashboard';
 
 // Fuerza a Next.js a revalidar los datos de esta página cada 15 minutos
 export const revalidate = 900; 
@@ -32,23 +32,9 @@ export default async function Home() {
   const alertaEvaluada = analizarRiesgoHelada(tempMinima, probabilidadHelada, horaCritica);
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-8 bg-slate-950">
-      <div className="w-full max-w-3xl">
-        <header className="mb-10 text-center sm:text-left border-b border-slate-800 pb-6">
-          <h1 className="text-4xl font-bold tracking-tight text-sky-400">
-            Andes Alert 🏔️
-          </h1>
-          <p className="mt-2 text-slate-400">
-            Panel de control meteorológico para el sector de Taraco - Huancané.
-          </p>
-        </header>
-
-        <section className="space-y-6">
-          <h2 className="text-xl font-semibold text-slate-200">Estado Actual de Amenazas</h2>
-          {/* 4. Renderizar el componente visual */}
-          <PanelAlertas alerta={alertaEvaluada} />
-        </section>
-      </div>
+    <main className="relative flex min-h-screen items-center justify-center p-6 overflow-hidden">
+      {/* 4. Delegamos toda la interfaz y animaciones al Client Component */}
+      <ClientDashboard alertaEvaluada={alertaEvaluada} />
     </main>
   );
 }
