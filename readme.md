@@ -6,6 +6,6 @@ Prioriza el envío de alertas según la probabilidad de ocurrencia del fenómeno
 Collaborators:
 
 - Darwin Reynolds 
--
+- Carlos Paul
 -
 -
