@@ -68,11 +68,11 @@ export default function ClientDashboard({ alertaEvaluada }: Props) {
 
       {/* Gran Modal Superpuesto */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-md">
-          <div className="relative w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl sm:p-8 dark:border-slate-800 dark:bg-slate-900">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4 backdrop-blur-sm transition-all dark:bg-black/60">
+          <div className="relative w-full max-w-[440px] animate-in fade-in zoom-in-95 duration-300 rounded-3xl border border-white/40 bg-white/70 p-8 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/60 dark:shadow-sky-900/20">
             <button
               onClick={() => setIsModalOpen(false)}
-              className="absolute top-5 right-5 rounded-full bg-slate-100 p-2 text-slate-500 transition hover:bg-slate-200 hover:text-slate-800 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+              className="absolute top-5 right-5 rounded-full bg-slate-200/50 p-2 text-slate-500 transition hover:bg-slate-300 hover:text-slate-800 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
             >
               <X size={20} />
             </button>
