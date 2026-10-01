@@ -31,7 +31,7 @@ export async function registrarAgricultor(
     {
       nombre_completo: nombreCompleto,
       telefono: telefonoNormalizado,
-      comunidad,
+      comunidad:comunidad,
       tolerancia_alerta: toleranciaAlerta,
     },
   ]);
