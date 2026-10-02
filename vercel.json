@@ -1,8 +1,1 @@
-{
-  "crons": [
-    {
-      "path": "/api/cron/monitoreo",
-      "schedule": "0 1 * * *"
-    }
-  ]
-}
+{}
