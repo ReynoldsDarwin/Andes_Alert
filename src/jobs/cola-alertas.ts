@@ -4,7 +4,7 @@ import { enviarWhatsAppAlerta } from '@/services/notificaciones/whatsapp-meta';
 import { supabase } from '@/lib/supabase';
 
 export async function despacharAlertasMasivas(alerta: EvaluacionAlerta) {
-  // Las prioridades bajas (probabilidad < 50%) solo se muestran en la PWA y no disparan colas.
+  // Las prioridades bajas (probabilidad < 50%) solo se registran en el Dashboard web
   if (alerta.prioridad === 'BAJA') {
     console.log('Alerta de prioridad BAJA: Registrada en Dashboard web. No se encolan mensajes directos.');
     return;
@@ -16,28 +16,41 @@ export async function despacharAlertasMasivas(alerta: EvaluacionAlerta) {
       .from('agricultores')
       .select('nombre_completo, telefono, tolerancia_alerta');
 
-    if (error) throw error;
-    if (!agricultores || agricultores.length === 0) return;
+    if (error) {
+      console.error('Error al consultar agricultores en Supabase:', error);
+      throw error;
+    }
+
+    if (!agricultores || agricultores.length === 0) {
+      console.log('No se encontraron agricultores para notificar.');
+      return;
+    }
 
     // 2. Filtrar a quiénes se les notifica dependiendo de su preferencia de riesgo
     const contactosNotificables = agricultores.filter((user) => {
-      if (alerta.prioridad === 'ALTA') return true; // Urgente > 75% notifica a todos[cite: 2]
-      return user.tolerancia_alerta === 'MEDIA' || user.tolerancia_alerta === 'BAJA'; 
+      if (alerta.prioridad === 'ALTA') return true;
+      return user.tolerancia_alerta === 'MEDIA' || user.tolerancia_alerta === 'BAJA';
     });
 
-    // 3. Despacho Multicanal
-    for (const contacto of contactosNotificables) {
-      // Enviar SIEMPRE por WhatsApp
-      await enviarWhatsAppAlerta(contacto.telefono, alerta.mensaje);
+    console.log(`Iniciando despacho multicanal para ${contactosNotificables.length} agricultores.`);
 
-      // Si la alerta es de máxima urgencia, intentar despachar SMS complementario
-      if (alerta.canalSugerido === 'SMS_URGENTE') {
-        await enviarSMSAlerta(contacto.telefono, alerta.mensaje);
+    // 3. Despacho Multicanal Simultáneo (WhatsApp + SMS)
+    for (const contacto of contactosNotificables) {
+      // Promise.allSettled dispara ambos canales en paralelo y evita que un fallo detenga al otro
+      const [resWhatsApp, resSMS] = await Promise.allSettled([
+        enviarWhatsAppAlerta(contacto.telefono, alerta.mensaje),
+        enviarSMSAlerta(contacto.telefono, alerta.mensaje)
+      ]);
+
+      if (resWhatsApp.status === 'rejected') {
+        console.error(`Fallo en entrega de WhatsApp para ${contacto.telefono}:`, resWhatsApp.reason);
+      }
+      if (resSMS.status === 'rejected') {
+        console.error(`Fallo en entrega de SMS para ${contacto.telefono}:`, resSMS.reason);
       }
     }
-    
-    console.log(`Despacho finalizado. Alcanzados ${contactosNotificables.length} agricultores.`);
 
+    console.log(`Despacho finalizado. Alcanzados ${contactosNotificables.length} agricultores.`);
   } catch (error) {
     console.error('Fallo general en la ejecución de la cola masiva de alertas:', error);
   }
