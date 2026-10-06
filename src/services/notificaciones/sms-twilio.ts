@@ -16,16 +16,17 @@ export async function enviarSMSAlerta(numeroDestino: string, cuerpoMensaje: stri
 
   const endpoint = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
 
-  // En cuentas de prueba, Twilio bloquea texto no registrado o caracteres especiales (emojis).
-  // Sanitizamos el texto para evitar que el filtro de plantillas lo rechace.
-  const mensajeLimpio = cuerpoMensaje
-    .replace(/[^\w\s.,°:()/-]/gi, '') // Remueve emojis que activan filtros de spam
-    .trim();
+  // NOTA PARA MODO TRIAL DE TWILIO:
+  // Twilio bloquea texto personalizado con el error 572006 salvo que use el texto de una plantilla autorizada.
+  // En producción (con Upgrade de cuenta), se usa directamente: cuerpoMensaje
+  const mensajeParaDespacho = process.env.TWILIO_IS_TRIAL === 'true'
+    ? 'Your appointment is coming up on July 21 at 3PM'
+    : cuerpoMensaje;
 
   const datosURL = new URLSearchParams({
     To: numeroFormateado,
     From: twilioPhone,
-    Body: mensajeLimpio,
+    Body: mensajeParaDespacho,
   });
 
   try {
