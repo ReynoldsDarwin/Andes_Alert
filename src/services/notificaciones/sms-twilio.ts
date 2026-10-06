@@ -4,11 +4,11 @@ export async function enviarSMSAlerta(numeroDestino: string, cuerpoMensaje: stri
   const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
 
   if (!accountSid || !authToken || !twilioPhone) {
-    console.error('Credenciales de Twilio ausentes en entorno local o de producción.');
+    console.error('Credenciales de Twilio ausentes en el entorno.');
     return;
   }
 
-  // 1. Sanitizar y garantizar formato E.164 (+519XXXXXXXX) para Twilio
+  // 1. Asegurar formato E.164 (+519XXXXXXXX)
   const soloDigitos = numeroDestino.replace(/\D/g, '');
   const numeroFormateado = numeroDestino.startsWith('+')
     ? numeroDestino
@@ -16,10 +16,16 @@ export async function enviarSMSAlerta(numeroDestino: string, cuerpoMensaje: stri
 
   const endpoint = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
 
+  // En cuentas de prueba, Twilio bloquea texto no registrado o caracteres especiales (emojis).
+  // Sanitizamos el texto para evitar que el filtro de plantillas lo rechace.
+  const mensajeLimpio = cuerpoMensaje
+    .replace(/[^\w\s.,°:()/-]/gi, '') // Remueve emojis que activan filtros de spam
+    .trim();
+
   const datosURL = new URLSearchParams({
     To: numeroFormateado,
     From: twilioPhone,
-    Body: cuerpoMensaje,
+    Body: mensajeLimpio,
   });
 
   try {
@@ -42,6 +48,6 @@ export async function enviarSMSAlerta(numeroDestino: string, cuerpoMensaje: stri
       console.log(`✅ SMS despachado con éxito a ${numeroFormateado}. SID: ${resultado.sid}`);
     }
   } catch (error) {
-    console.error('❌ Fallo en la conexión de red al despachar SMS de Twilio:', error);
+    console.error('❌ Fallo de red al conectar con Twilio:', error);
   }
 }
