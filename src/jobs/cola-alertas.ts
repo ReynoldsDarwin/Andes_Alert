@@ -25,12 +25,14 @@ export async function despacharAlertasMasivas(alerta: EvaluacionAlerta) {
       return user.tolerancia_alerta === 'MEDIA' || user.tolerancia_alerta === 'BAJA'; 
     });
 
-    // 3. Despacho Multicanal: SMS urgente vs. Push de WhatsApp[cite: 2]
+    // 3. Despacho Multicanal
     for (const contacto of contactosNotificables) {
+      // Enviar SIEMPRE por WhatsApp
+      await enviarWhatsAppAlerta(contacto.telefono, alerta.mensaje);
+
+      // Si la alerta es de máxima urgencia, intentar despachar SMS complementario
       if (alerta.canalSugerido === 'SMS_URGENTE') {
         await enviarSMSAlerta(contacto.telefono, alerta.mensaje);
-      } else if (alerta.canalSugerido === 'PUSH_WHATSAPP') {
-        await enviarWhatsAppAlerta(contacto.telefono, alerta.mensaje);
       }
     }
     
