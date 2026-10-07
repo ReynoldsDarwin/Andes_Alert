@@ -1,47 +1,64 @@
-export async function enviarWhatsAppAlerta(numeroDestino: string, cuerpoMensaje: string) {
-  const phoneId = process.env.WHATSAPP_PHONE_ID;
-  const apiToken = process.env.WHATSAPP_API_TOKEN;
+import { EvaluacionAlerta } from '@/types/clima';
 
-  if (!phoneId || !apiToken) {
-    console.error('Credenciales de WhatsApp Meta ausentes en el entorno local.');
+export async function enviarWhatsAppAlerta(numeroDestino: string, alerta: EvaluacionAlerta) {
+  const phoneId = process.env.WHATSAPP_PHONE_ID;
+  const token = process.env.WHATSAPP_API_TOKEN;
+
+  if (!phoneId || !token) {
+    console.error('Credenciales de WhatsApp Meta ausentes en entorno.');
     return;
   }
 
-  // Quitar el '+' y cualquier espacio o guión para cumplir el formato de Meta
-  const numeroLimpio = numeroDestino.replace(/\D/g, '');
+  // Sanitizar número sin símbolos para Meta (ej: 51989715318)
+  const destinatarioLimpio = numeroDestino.replace(/\D/g, '');
 
-  const endpoint = `https://graph.facebook.com/v25.0/${phoneId}/messages`;
+  const endpoint = `https://graph.facebook.com/v19.0/${phoneId}/messages`;
 
-  // Usamos el payload de plantilla verificado en la consola de Meta
+  // Mapear recomendación breve para el parámetro {{5}}
+  const accionSugerida = alerta.fenomeno.toLowerCase().includes('lluvia')
+    ? 'revisar drenajes y asegurar insumos'
+    : 'cubrir cultivos y resguardar ganado';
+
   const payload = {
     messaging_product: 'whatsapp',
-    to: numeroLimpio,
+    to: destinatarioLimpio,
     type: 'template',
     template: {
-      name: 'hello_world',
-      language: {
-        code: 'en_US',
-      },
-    },
+      name: 'alerta_clima_taraco',
+      language: { code: 'es_PE' },
+      components: [
+        {
+          type: 'body',
+          parameters: [
+            { type: 'text', text: alerta.fenomeno },
+            { type: 'text', text: String(alerta.probabilidad) },
+            { type: 'text', text: 'Taraco' },
+            { type: 'text', text: alerta.horaEstimada || 'las próximas horas' },
+            { type: 'text', text: accionSugerida }
+          ]
+        }
+      ]
+    }
   };
 
   try {
     const respuesta = await fetch(endpoint, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiToken}`,
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(payload)
     });
 
+    const data = await respuesta.json();
+
     if (!respuesta.ok) {
-      const errorData = await respuesta.json();
-      console.error('Error de API Meta al despachar WhatsApp:', errorData);
+      console.error('❌ Error de API Meta al despachar WhatsApp:', data);
     } else {
-      console.log(`✅ WhatsApp despachado con éxito al número ${numeroLimpio}`);
+      console.log(`✅ WhatsApp con alerta climática despachado a ${destinatarioLimpio}. SID:`, data.messages?.[0]?.id);
     }
   } catch (error) {
-    console.error('Fallo en la conexión de red al despachar WhatsApp:', error);
+    console.error('❌ Error de red al despachar WhatsApp:', error);
   }
 }
