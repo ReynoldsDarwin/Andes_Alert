@@ -1,4 +1,5 @@
 import { EvaluacionAlerta } from '@/types/clima';
+import { enviarSMSHttp } from '@/services/notificaciones/sms-httpsms';
 import { enviarWhatsAppAlerta } from '@/services/notificaciones/whatsapp-meta';
 import { supabase } from '@/lib/supabase';
 
@@ -28,10 +29,20 @@ export async function despacharAlertasMasivas(alerta: EvaluacionAlerta) {
       return user.tolerancia_alerta === 'MEDIA' || user.tolerancia_alerta === 'BAJA';
     });
 
-    console.log(`Iniciando despacho multicanal para ${contactosNotificables.length} agricultores.`);
+    console.log(`Iniciando despacho multicanal simultáneo para ${contactosNotificables.length} agricultores.`);
 
     for (const contacto of contactosNotificables) {
-      await enviarWhatsAppAlerta(contacto.telefono, alerta);
+      const [resWhatsApp, resSMS] = await Promise.allSettled([
+        enviarWhatsAppAlerta(contacto.telefono, alerta),
+        enviarSMSHttp(contacto.telefono, alerta.mensaje),
+      ]);
+
+      if (resWhatsApp.status === 'rejected') {
+        console.error(`Fallo en entrega de WhatsApp para ${contacto.telefono}:`, resWhatsApp.reason);
+      }
+      if (resSMS.status === 'rejected') {
+        console.error(`Fallo en entrega de SMS para ${contacto.telefono}:`, resSMS.reason);
+      }
     }
 
     console.log(`Despacho finalizado. Alcanzados ${contactosNotificables.length} agricultores.`);
