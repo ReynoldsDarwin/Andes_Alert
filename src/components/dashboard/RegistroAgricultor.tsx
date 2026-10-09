@@ -39,7 +39,14 @@ export default function RegistroAgricultor() {
             type="tel"
             name="telefono"
             required
+            maxLength={9}
+            pattern="[9][0-9]{8}"
             placeholder="987654321"
+            onInput={(e) => {
+              // Previene escribir letras, símbolos o más de 9 dígitos
+              const target = e.currentTarget;
+              target.value = target.value.replace(/\D/g, '').slice(0, 9);
+            }}
             className="w-full rounded-xl border border-slate-300/60 bg-white/50 px-4 py-3 text-slate-900 placeholder:text-slate-400 outline-none transition-all focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-slate-500"
           />
         </div>
