@@ -1,13 +1,21 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  darkMode:'class',
   content: [
-    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      keyframes: {
+        fall: {
+          '0%': { transform: 'translateY(-10vh)', opacity: '0' },
+          '10%': { opacity: '1' },
+          '100%': { transform: 'translateY(110vh)', opacity: '0.5' }
+        }
+      },
+      animation: {
+        fall: 'fall linear infinite'
+      }
+    },
   },
   plugins: [],
-};
+}

@@ -1,85 +1,122 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Sun, Moon, X, BellRing } from 'lucide-react';
-import PanelAlertas from './PanelAlertas';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { BellRing, X, ThermometerSnowflake, Droplets, Wind, Sun } from 'lucide-react';
 import RegistroAgricultor from './RegistroAgricultor';
+import WeatherEffects from './WeatherEffects';
 import { EvaluacionAlerta } from '@/types/clima';
+import { getBackgroundClasses } from '@/lib/theme-weather';
 
 interface Props {
   alertaEvaluada: EvaluacionAlerta | null;
+  horaActualIso: string;
+  temperaturaActual: number;
 }
 
-export default function ClientDashboard({ alertaEvaluada }: Props) {
+export default function ClientDashboard({ alertaEvaluada, horaActualIso, temperaturaActual }: Props) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const bgClass = getBackgroundClasses(horaActualIso, alertaEvaluada);
 
-  useEffect(() => {
-    const root = document.documentElement;
-    if (isDarkMode) {
-      root.classList.add('dark');
-      root.classList.remove('light');
-    } else {
-      root.classList.add('light');
-      root.classList.remove('dark');
+  const getIconoClima = () => {
+    if (!alertaEvaluada) return <Sun className="text-yellow-300 drop-shadow-md" size={32} />;
+    switch (alertaEvaluada.fenomeno) {
+      case 'HELADA':
+      case 'GRANIZADA': return <ThermometerSnowflake className="text-sky-200 drop-shadow-md" size={32} />;
+      case 'LLUVIA_TORRENCIAL': return <Droplets className="text-blue-300 drop-shadow-md" size={32} />;
+      case 'VIENTO_FUERTE': return <Wind className="text-slate-300 drop-shadow-md" size={32} />;
+      default: return <Sun className="text-yellow-300 drop-shadow-md" size={32} />;
     }
-  }, [isDarkMode]);
+  };
 
   return (
-    <>
-      {/* Botón flotante para alternar Tema Claro / Oscuro */}
-      <button
-        onClick={() => setIsDarkMode(!isDarkMode)}
-        className="fixed top-6 right-6 z-40 rounded-full border border-slate-300 bg-white/80 p-3 text-slate-800 shadow-md backdrop-blur transition hover:scale-105 dark:border-slate-700 dark:bg-slate-900/80 dark:text-sky-400"
-        aria-label="Cambiar tema"
+    <div className={`relative flex min-h-screen w-full flex-col items-center overflow-hidden transition-colors duration-1000 ${bgClass}`}>
+      <WeatherEffects fenomeno={alertaEvaluada?.fenomeno} />
+
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: isModalOpen ? 0.2 : 1, scale: isModalOpen ? 0.95 : 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="z-10 flex w-full max-w-md flex-col items-center px-6 pt-24 text-white"
       >
-        {isDarkMode ? <Sun size={22} /> : <Moon size={22} />}
-      </button>
-
-      {/* Contenido principal: se difumina si el modal está activo */}
-      <div
-        className={`flex w-full max-w-2xl flex-col items-center space-y-8 text-center transition-all duration-300 ${
-          isModalOpen ? 'pointer-events-none scale-95 blur-md opacity-40' : 'scale-100 blur-none opacity-100'
-        }`}
-      >
-        <header className="space-y-2">
-          <h1 className="text-4xl font-extrabold tracking-tight text-sky-700 sm:text-6xl dark:text-sky-400">
-            Andes Alert 🏔️
-          </h1>
-          <p className="text-base text-slate-600 sm:text-lg dark:text-slate-400">
-            Monitoreo y alerta climática en tiempo real para Taraco - Huancané
-          </p>
-        </header>
-
-        {/* Estado y clima como protagonista */}
-        <div className="w-full">
-          <PanelAlertas alerta={alertaEvaluada} />
-        </div>
-
-        {/* Botón para abrir el registro */}
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 rounded-xl bg-sky-600 px-6 py-3.5 font-bold text-white shadow-lg transition hover:bg-sky-500 hover:shadow-sky-500/25"
-        >
-          <BellRing size={20} />
-          Registrarse para recibir alertas
-        </button>
-      </div>
-
-      {/* Gran Modal Superpuesto */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 p-4 backdrop-blur-sm transition-all dark:bg-black/60">
-          <div className="relative w-full max-w-[440px] animate-in fade-in zoom-in-95 duration-300 rounded-3xl border border-white/40 bg-white/70 p-8 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/60 dark:shadow-sky-900/20">
-            <button
-              onClick={() => setIsModalOpen(false)}
-              className="absolute top-5 right-5 rounded-full bg-slate-200/50 p-2 text-slate-500 transition hover:bg-slate-300 hover:text-slate-800 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
-            >
-              <X size={20} />
-            </button>
-            <RegistroAgricultor />
+        <h1 className="text-4xl font-medium tracking-wide drop-shadow-md">Taraco - Puno</h1>
+        
+        <div className="mt-4 flex flex-col items-center">
+          <div className="flex items-center justify-center gap-4">
+            <span className="text-9xl font-thin tracking-tighter drop-shadow-lg leading-none">
+              {Math.round(temperaturaActual)}°
+            </span>
+          </div>
+          <div className="mt-4 flex items-center gap-3 bg-black/20 px-4 py-2 rounded-full backdrop-blur-sm border border-white/10">
+            {getIconoClima()}
+            <span className="text-xl font-medium capitalize drop-shadow-md">
+              {alertaEvaluada ? alertaEvaluada.fenomeno.replace('_', ' ') : 'Mayormente Despejado'}
+            </span>
           </div>
         </div>
-      )}
-    </>
+
+        {alertaEvaluada && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="mt-12 w-full rounded-3xl border border-white/20 bg-white/10 p-6 shadow-2xl backdrop-blur-xl"
+          >
+            <div className="flex items-center gap-3 border-b border-white/20 pb-4">
+              <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                alertaEvaluada.prioridad === 'ALTA' ? 'bg-red-500/80' : 
+                alertaEvaluada.prioridad === 'MEDIA' ? 'bg-amber-500/80' : 'bg-slate-500/80'
+              }`}>
+                PRIORIDAD {alertaEvaluada.prioridad}
+              </span>
+              <h2 className="text-lg font-semibold tracking-wide">Pronóstico Crítico</h2>
+            </div>
+            <p className="mt-4 text-base font-medium leading-relaxed text-white/95">
+              {alertaEvaluada.mensaje}
+            </p>
+            <div className="mt-4 pt-4 border-t border-white/10 flex justify-between text-sm text-white/80">
+              <span>Hora: <strong>{alertaEvaluada.horaEstimada}</strong></span>
+              <span>Canal: <strong>{alertaEvaluada.canalSugerido.replace('_', ' ')}</strong></span>
+            </div>
+          </motion.div>
+        )}
+
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="mt-12 flex w-full items-center justify-center gap-3 rounded-2xl bg-white/20 px-6 py-4 font-bold text-white shadow-lg backdrop-blur-md transition-all hover:bg-white/30 active:scale-95 border border-white/10"
+        >
+          <BellRing size={22} />
+          Registrarse para Alertas
+        </button>
+      </motion.div>
+
+      <AnimatePresence>
+        {isModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="relative w-full max-w-md rounded-t-3xl sm:rounded-3xl border border-white/10 bg-slate-900/95 p-6 shadow-2xl backdrop-blur-2xl"
+            >
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white/60 transition hover:bg-white/20 hover:text-white"
+              >
+                <X size={20} />
+              </button>
+              <div className="mt-2">
+                <RegistroAgricultor />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
