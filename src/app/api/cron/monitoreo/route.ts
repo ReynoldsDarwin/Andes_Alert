@@ -10,12 +10,11 @@ export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json(
-      { error: 'Acceso no autorizado' },
-      { status: 401 }
-    );
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+    return NextResponse.json({ error: 'Acceso no autorizado' }, { status: 401 });
   }
+
+  const dry = request.nextUrl.searchParams.get('dry') === '1';
 
   try {
     // 2. Obtener datos meteorológicos actualizados de Taraco
@@ -68,12 +67,13 @@ export async function GET(request: NextRequest) {
 
     // 5. Si la prioridad requiere acción (MEDIA o ALTA), despachar alertas
     if (evaluacion.prioridad === 'MEDIA' || evaluacion.prioridad === 'ALTA') {
-      await despacharAlertasMasivas(evaluacion);
+      const resumen = await despacharAlertasMasivas(evaluacion, { dry });
 
       return NextResponse.json({
         status: 'ejecutado',
-        accion: 'Alertas despachadas',
+        accion: dry ? 'Simulación: no se envió nada' : 'Alertas despachadas',
         evaluacion,
+        resumen,
       });
     }
 
