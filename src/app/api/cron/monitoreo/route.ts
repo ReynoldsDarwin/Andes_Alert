@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { obtenerPronosticoTaraco } from '@/services/meteorologia/open-meteo';
 import { analizarRiesgoHelada } from '@/core/motor-probabilidades';
 import { despacharAlertasMasivas } from '@/jobs/cola-alertas';
+import { indiceHoraActual } from '@/lib/utils';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,9 +34,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 3. Identificar la temperatura mínima prevista y su hora
-    const temperaturaReal = Math.min(...datosPronostico.temperatura);
-    const indiceMin = datosPronostico.temperatura.indexOf(temperaturaReal);
+    // 3. Identificar la temperatura mínima prevista y su hora.
+    // Open-Meteo devuelve el pronóstico desde las 00:00 de hoy: se parte de la
+    // hora actual (Lima) para no alertar por horas que ya pasaron.
+    const inicio = indiceHoraActual(datosPronostico.tiempo);
+    const ventana = datosPronostico.temperatura.slice(inicio, inicio + 24);
+    const temperaturaReal = Math.min(...ventana);
+    const indiceMin = inicio + ventana.indexOf(temperaturaReal);
     const temperaturaMin = tempSimulada ?? temperaturaReal;
 
     const fechaHora = new Date(datosPronostico.tiempo[indiceMin]);
