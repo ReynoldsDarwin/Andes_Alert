@@ -15,6 +15,23 @@ export default async function Home() {
   const temperaturaActual = pronostico.temperatura[0];
   const horaActualIso = pronostico.tiempo[0];
 
+  // Extraemos las proyecciones específicas para la tarjeta de "Pronóstico 24 Horas"
+  const getTempForHour = (targetHour: string) => {
+    const index = pronostico.tiempo.findIndex(t => {
+      const date = new Date(t);
+      const localHour = date.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false });
+      return localHour.startsWith(targetHour);
+    });
+    return index !== -1 && index < 24 ? pronostico.temperatura[index] : tempMinima;
+  };
+
+  const proyeccion = {
+    h18: getTempForHour("18:"),
+    h21: getTempForHour("21:"),
+    h00: getTempForHour("00:"),
+    h03: getTempForHour("03:")
+  };
+
   const horaCritica = new Date(pronostico.tiempo[indiceMinimo]).toLocaleTimeString('es-PE', {
     hour: '2-digit', 
     minute: '2-digit',
@@ -29,11 +46,12 @@ export default async function Home() {
   const alertaEvaluada = analizarRiesgoHelada(tempMinima, probabilidadHelada, horaCritica);
 
   return (
-    <main className="p-0 m-0 bg-slate-950">
+    <main className="p-0 m-0 bg-slate-950 overflow-hidden">
       <ClientDashboard 
         alertaEvaluada={alertaEvaluada} 
         horaActualIso={horaActualIso}
         temperaturaActual={temperaturaActual}
+        proyeccion={proyeccion}
       />
     </main>
   );
