@@ -6,7 +6,7 @@ import { despacharAlertasMasivas } from '@/jobs/cola-alertas';
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
-  // 1. Proteger el endpoint mediante CRON_SECRET de Vercel
+  // 1. Proteger el endpoint: sin CRON_SECRET configurado, se rechaza todo
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
 
@@ -14,7 +14,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Acceso no autorizado' }, { status: 401 });
   }
 
+  // Modo simulación: no envía nada. Solo en este modo se acepta ?temp=
   const dry = request.nextUrl.searchParams.get('dry') === '1';
+  const tempParam = request.nextUrl.searchParams.get('temp');
+  const tempSimulada =
+    dry && tempParam !== null && tempParam.trim() !== '' && Number.isFinite(Number(tempParam))
+      ? Number(tempParam)
+      : null;
 
   try {
     // 2. Obtener datos meteorológicos actualizados de Taraco
@@ -28,17 +34,16 @@ export async function GET(request: NextRequest) {
     }
 
     // 3. Identificar la temperatura mínima prevista y su hora
-    const temperaturaMin = Math.min(...datosPronostico.temperatura);
-    const indiceMin = datosPronostico.temperatura.indexOf(temperaturaMin);
+    const temperaturaReal = Math.min(...datosPronostico.temperatura);
+    const indiceMin = datosPronostico.temperatura.indexOf(temperaturaReal);
+    const temperaturaMin = tempSimulada ?? temperaturaReal;
 
-    // Formatear la hora del pronóstico (ej: "2026-10-02T04:00" -> "04:00 a. m.")
     const fechaHora = new Date(datosPronostico.tiempo[indiceMin]);
     const horaEstimada = !isNaN(fechaHora.getTime())
       ? fechaHora.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: true })
       : datosPronostico.tiempo[indiceMin] || '05:00 a. m.';
 
-    // Estimación de probabilidad: para heladas radiativas en Taraco, si temp <= 0°C
-    // se asigna probabilidad según el descenso térmico
+    // Estimación de probabilidad según el descenso térmico
     let probabilidad = 0;
     if (temperaturaMin <= -2) {
       probabilidad = 90;
@@ -49,19 +54,17 @@ export async function GET(request: NextRequest) {
     }
 
     // 4. Evaluar riesgo con el motor de probabilidades
-    const evaluacion = analizarRiesgoHelada(
-      temperaturaMin,
-      probabilidad,
-      horaEstimada
-    );
+    const evaluacion = analizarRiesgoHelada(temperaturaMin, probabilidad, horaEstimada);
 
-    // Si la temperatura es > 2°C, la función retorna null (sin helada)
+    const simulacion = tempSimulada !== null ? { simulada: true, temperaturaReal } : undefined;
+
     if (!evaluacion) {
       return NextResponse.json({
         status: 'ejecutado',
         accion: 'Sin riesgo de helada agronómica (> 2°C)',
         temperaturaMin,
         horaEstimada,
+        simulacion,
       });
     }
 
@@ -74,6 +77,7 @@ export async function GET(request: NextRequest) {
         accion: dry ? 'Simulación: no se envió nada' : 'Alertas despachadas',
         evaluacion,
         resumen,
+        simulacion,
       });
     }
 
@@ -81,6 +85,7 @@ export async function GET(request: NextRequest) {
       status: 'ejecutado',
       accion: 'Condiciones frías de prioridad baja, no se requirió despacho masivo',
       evaluacion,
+      simulacion,
     });
   } catch (error) {
     console.error('Error durante la ejecución del cron de monitoreo:', error);
