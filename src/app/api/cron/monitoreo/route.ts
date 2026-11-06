@@ -77,13 +77,29 @@ export async function GET(request: NextRequest) {
     if (evaluacion.prioridad === 'MEDIA' || evaluacion.prioridad === 'ALTA') {
       const resumen = await despacharAlertasMasivas(evaluacion, { dry });
 
-      return NextResponse.json({
-        status: 'ejecutado',
-        accion: dry ? 'Simulación: no se envió nada' : 'Alertas despachadas',
-        evaluacion,
-        resumen,
-        simulacion,
-      });
+      // Fallo total: había destinatarios y a NINGUNO le llegó el aviso por ningún canal.
+      // Se responde 502 para que cron-job.org lo registre como fallo y te avise.
+      const falloTotal =
+        !dry && resumen.destinatarios > 0 && resumen.sinEntrega === resumen.destinatarios;
+      const hayFallos =
+        !dry &&
+        (resumen.sinEntrega > 0 || resumen.sms.fallidos > 0 || resumen.whatsapp.fallidos > 0);
+
+      let accion = 'Alertas despachadas';
+      if (dry) accion = 'Simulación: no se envió nada';
+      else if (falloTotal) accion = 'FALLO TOTAL: el aviso no llegó a ningún agricultor';
+      else if (hayFallos) accion = 'Alertas despachadas con fallos parciales';
+
+      return NextResponse.json(
+        {
+          status: falloTotal ? 'error' : 'ejecutado',
+          accion,
+          evaluacion,
+          resumen,
+          simulacion,
+        },
+        { status: falloTotal ? 502 : 200 }
+      );
     }
 
     return NextResponse.json({
@@ -95,7 +111,10 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error durante la ejecución del cron de monitoreo:', error);
     return NextResponse.json(
-      { error: 'Fallo al procesar el monitoreo climático', detalle: String(error) },
+      {
+        error: 'Fallo al procesar el monitoreo climático',
+        detalle: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     );
   }
