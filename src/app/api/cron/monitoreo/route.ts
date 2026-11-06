@@ -15,11 +15,29 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Acceso no autorizado' }, { status: 401 });
   }
 
-  // Modo simulación: no envía nada. Solo en este modo se acepta ?temp=
-  const dry = request.nextUrl.searchParams.get('dry') === '1';
-  const tempParam = request.nextUrl.searchParams.get('temp');
+  const params = request.nextUrl.searchParams;
+
+  // ?dry=1  -> simulación: no envía nada.
+  const dry = params.get('dry') === '1';
+
+  // ?solo=519XXXXXXXX -> limita el envío a UN agricultor ya registrado (pruebas).
+  const soloCrudo = params.get('solo');
+  const solo = soloCrudo === null ? null : soloCrudo.replace(/[\s+\-]/g, '');
+  if (solo !== null && !/^\d{9,15}$/.test(solo)) {
+    return NextResponse.json(
+      { error: 'Parámetro solo inválido: use el celular con 9 a 15 dígitos' },
+      { status: 400 }
+    );
+  }
+
+  // ?temp=<valor> -> simula la temperatura mínima. Solo se acepta junto con dry=1
+  // o con solo=..., nunca para un envío masivo real.
+  const tempParam = params.get('temp');
   const tempSimulada =
-    dry && tempParam !== null && tempParam.trim() !== '' && Number.isFinite(Number(tempParam))
+    (dry || solo !== null) &&
+    tempParam !== null &&
+    tempParam.trim() !== '' &&
+    Number.isFinite(Number(tempParam))
       ? Number(tempParam)
       : null;
 
@@ -59,11 +77,12 @@ export async function GET(request: NextRequest) {
     }
 
     // 4. Evaluar riesgo con el motor de probabilidades
-    const evaluacion = analizarRiesgoHelada(temperaturaMin, probabilidad, horaEstimada);
+    const evaluacionBase = analizarRiesgoHelada(temperaturaMin, probabilidad, horaEstimada);
 
-    const simulacion = tempSimulada !== null ? { simulada: true, temperaturaReal } : undefined;
+    const simulacion =
+      tempSimulada !== null ? { simulada: true, temperaturaReal, envioReal: !dry } : undefined;
 
-    if (!evaluacion) {
+    if (!evaluacionBase) {
       return NextResponse.json({
         status: 'ejecutado',
         accion: 'Sin riesgo de helada agronómica (> 2°C)',
@@ -73,9 +92,15 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Un envío real con temperatura simulada es una prueba: se rotula en el mensaje.
+    const evaluacion =
+      tempSimulada !== null && !dry
+        ? { ...evaluacionBase, mensaje: `[PRUEBA] ${evaluacionBase.mensaje}` }
+        : evaluacionBase;
+
     // 5. Si la prioridad requiere acción (MEDIA o ALTA), despachar alertas
     if (evaluacion.prioridad === 'MEDIA' || evaluacion.prioridad === 'ALTA') {
-      const resumen = await despacharAlertasMasivas(evaluacion, { dry });
+      const resumen = await despacharAlertasMasivas(evaluacion, { dry, solo });
 
       // Fallo total: había destinatarios y a NINGUNO le llegó el aviso por ningún canal.
       // Se responde 502 para que cron-job.org lo registre como fallo y te avise.

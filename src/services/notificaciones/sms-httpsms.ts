@@ -1,4 +1,5 @@
 import type { ResultadoEnvio } from '@/types/envio';
+import { aTextoSMS } from '@/lib/sms-texto';
 
 const TIMEOUT_MS = 10_000;
 
@@ -30,7 +31,7 @@ export async function enviarSMSHttp(
         'Accept': 'application/json',
       },
       body: JSON.stringify({
-        content: cuerpoMensaje,
+        content: aTextoSMS(cuerpoMensaje),
         from: fromNumber,
         to: destinatarioFormateado,
       }),

@@ -1,4 +1,4 @@
-import { EvaluacionAlerta, NivelPrioridad, TipoFenomeno } from '@/types/clima';
+import { EvaluacionAlerta, NivelPrioridad } from '@/types/clima';
 
 export function evaluarNivelAlerta(probabilidad: number): {
   prioridad: NivelPrioridad;
@@ -13,6 +13,11 @@ export function evaluarNivelAlerta(probabilidad: number): {
   return { prioridad: 'BAJA', canalSugerido: 'SOLO_WEB' };
 }
 
+// Cierra la hora como final de frase sin duplicar el punto de "a. m." / "p. m."
+function finDeFrase(hora: string): string {
+  return hora.trim().endsWith('.') ? hora.trim() : `${hora.trim()}.`;
+}
+
 export function analizarRiesgoHelada(
   temperaturaMinima: number,
   probabilidadHelada: number,
@@ -22,12 +27,13 @@ export function analizarRiesgoHelada(
   if (temperaturaMinima > 2) return null;
 
   const { prioridad, canalSugerido } = evaluarNivelAlerta(probabilidadHelada);
+  const horaTexto = finDeFrase(hora);
 
   let mensaje = '';
   if (prioridad === 'ALTA') {
-    mensaje = `⚠️ ALERTA URGENTE: ${probabilidadHelada}% de probabilidad de helada severa (${temperaturaMinima}°C) en Taraco a las ${hora}. Proteja sembríos y ganado.`;
+    mensaje = `⚠️ ALERTA URGENTE: ${probabilidadHelada}% de probabilidad de helada severa (${temperaturaMinima}°C) en Taraco a las ${horaTexto} Proteja sembríos y ganado.`;
   } else if (prioridad === 'MEDIA') {
-    mensaje = `Aviso preventivo: ${probabilidadHelada}% de riesgo de helada (${temperaturaMinima}°C) prevista para las ${hora}. Estar atentos.`;
+    mensaje = `Aviso preventivo: ${probabilidadHelada}% de riesgo de helada (${temperaturaMinima}°C) prevista para las ${horaTexto} Estar atentos.`;
   } else {
     mensaje = `Condiciones frías (${temperaturaMinima}°C) con baja probabilidad (${probabilidadHelada}%) de helada.`;
   }
